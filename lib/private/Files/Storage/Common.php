@@ -49,6 +49,7 @@ use OCP\Files\InvalidCharacterInPathException;
 use OCP\Files\InvalidPathException;
 use OCP\Files\ReservedWordException;
 use OCP\Files\Storage\ILockingStorage;
+use OCP\Files\Storage\IVersionedStorage;
 use OCP\Lock\ILockingProvider;
 
 /**
@@ -62,7 +63,7 @@ use OCP\Lock\ILockingProvider;
  * Some \OC\Files\Storage\Common methods call functions which are first defined
  * in classes which extend it, e.g. $this->stat() .
  */
-abstract class Common implements Storage, ILockingStorage {
+abstract class Common implements Storage, ILockingStorage, IVersionedStorage {
 
 	use LocalTempFileTrait;
 
@@ -683,5 +684,42 @@ abstract class Common implements Storage, ILockingStorage {
 	 */
 	public function setAvailability($isAvailable) {
 		$this->getStorageCache()->setAvailability($isAvailable);
+	}
+	public function getVersions($internalPath) {
+		// KISS implementation
+		if (!\OC_App::isEnabled('files_versions')) {
+			return [];
+		}
+		if (strpos($internalPath, 'files/') !== 0) {
+			return [];
+		}
+		$internalPath = substr($internalPath, 6);
+		return array_values(
+			\OCA\Files_Versions\Storage::getVersions($this->getOwner($internalPath), $internalPath));
+	}
+
+	public function getVersion($internalPath, $versionId) {
+		$versions = $this->getVersions($internalPath);
+		$versions = array_filter($versions, function ($version) use($versionId){
+			return $version['version'] === $versionId;
+		});
+		return array_shift($versions);
+	}
+
+	public function getContentOfVersion($internalPath, $versionId) {
+		$v = $this->getVersion($internalPath, $versionId);
+		return $this->file_get_contents($v['storage_location']);
+	}
+
+	public function restoreVersion($internalPath, $versionId) {
+		// KISS implementation
+		if (!\OC_App::isEnabled('files_versions')) {
+			return;
+		}
+		if (strpos($internalPath, 'files/') !== 0) {
+			return;
+		}
+		$internalPath = substr($internalPath, 6);
+		\OCA\Files_Versions\Storage::rollback($internalPath, $versionId);
 	}
 }

@@ -685,13 +685,6 @@ abstract class Common implements Storage, ILockingStorage, IVersionedStorage {
 		$this->getStorageCache()->setAvailability($isAvailable);
 	}
 
-
-	/**
-	 * Get the versions of file
-	 *
-	 * @param $internalPath
-	 * @return array
-	 */
 	public function getVersions($internalPath) {
 		// KISS implementation
 		if (!\OC_App::isEnabled('files_versions')) {
@@ -705,17 +698,28 @@ abstract class Common implements Storage, ILockingStorage, IVersionedStorage {
 			\OCA\Files_Versions\Storage::getVersions($this->getOwner($internalPath), $internalPath));
 	}
 
-	/**
-	 * Get version of a file
-	 * @param $internalPath
-	 * @param $versionId
-	 * @return mixed
-	 */
 	public function getVersion($internalPath, $versionId) {
 		$versions = $this->getVersions($internalPath);
 		$versions = array_filter($versions, function ($version) use($versionId){
 			return $version['version'] === $versionId;
 		});
 		return array_shift($versions);
+	}
+
+	public function getContentOfVersion($internalPath, $versionId) {
+		$v = $this->getVersion($internalPath, $versionId);
+		return $this->file_get_contents($v['storage_location']);
+	}
+
+	public function restoreVersion($internalPath, $versionId) {
+		// KISS implementation
+		if (!\OC_App::isEnabled('files_versions')) {
+			return;
+		}
+		if (strpos($internalPath, 'files/') !== 0) {
+			return;
+		}
+		$internalPath = substr($internalPath, 6);
+		\OCA\Files_Versions\Storage::rollback($internalPath, $versionId);
 	}
 }

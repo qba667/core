@@ -415,6 +415,12 @@ class Server extends ServerContainer implements IServerContainer {
 				$c->getLogger()
 			);
 		});
+		$this->registerService('MetaData', function (Server $c) {
+			return new MetaData(
+				$c->getL10N('lib'),
+				$c->getLogger()
+			);
+		});
 		$this->registerService('Logger', function (Server $c) {
 			$logClass = $c->query('AllConfig')->getSystemValue('log_type', 'owncloud');
 			$logger = 'OC\\Log\\' . ucfirst($logClass);
@@ -905,6 +911,15 @@ class Server extends ServerContainer implements IServerContainer {
 	 */
 	public function getAvatarManager() {
 		return $this->query('AvatarManager');
+	}
+
+	/**
+	 * Returns metadata for the handling the functionality
+	 *
+	 * @return \OCP\IMetaData
+	 */
+	public function getMetaData() {
+		return $this->query('MetaData');
 	}
 
 	/**

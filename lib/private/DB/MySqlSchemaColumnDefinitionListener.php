@@ -26,13 +26,31 @@ use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Types\Type;
 
-class MySqlSchemaColumnDefinitionListener{
 
-	public function __construct() {
-		$this->_platform = new MySqlPlatform();
-	}
+/**
+ * Class MySqlSchemaColumnDefinitionListener
+ *
+ * @package OC\DB
+ *
+ * This class contains the smallest portion of native Doctrine code taken from
+ * Doctrine\DBAL\Platforms\MySqlSchemaManager that allows to bypass the call to
+ * native _getPortableTableColumnDefinition method
+ *
+ * TODO: remove once https://github.com/owncloud/core/issues/28695 is fixed and Doctrine upgraded
+ */
+class MySqlSchemaColumnDefinitionListener{
+	/**
+	 * @var \Doctrine\DBAL\Platforms\AbstractPlatform
+	 */
+	protected $_platform;
 
 	public function onSchemaColumnDefinition(SchemaColumnDefinitionEventArgs $eventArgs) {
+		// We need an instance of platform with ownCloud-specific mappings
+		//  this part  can't be moved to constructor - it leads to an infinite recursion
+		if (is_null($this->_platform)) {
+			$this->_platform = \OC::$server->getDatabaseConnection()->getDatabasePlatform();
+		}
+
 		$tableColumn = $eventArgs->getTableColumn();
 		$eventArgs->preventDefault();
 		$column = $this->_getPortableTableColumnDefinition($tableColumn);
@@ -149,6 +167,7 @@ class MySqlSchemaColumnDefinitionListener{
 			'length'		=> $length,
 			'unsigned'	  => (bool) (strpos($tableColumn['type'], 'unsigned') !== false),
 			'fixed'		 => (bool) $fixed,
+			// This line was changed to fix breaking change introduced in MariaDB 10.2.6
 			'default'	   => isset($tableColumn['default']) && !($tableColumn['default'] === 'NULL' && $tableColumn['null'] === 'YES') ? $tableColumn['default'] : null,
 			'notnull'	   => (bool) ($tableColumn['null'] != 'YES'),
 			'scale'		 => null,

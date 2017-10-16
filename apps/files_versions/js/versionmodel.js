@@ -20,31 +20,20 @@
 		revert: function(options) {
 			options = options ? _.clone(options) : {};
 			var model = this;
-			var file = this.getFullPath();
-			var revision = this.get('timestamp');
 
-			$.ajax({
-				type: 'GET',
-				url: OC.generateUrl('/apps/files_versions/ajax/rollbackVersion.php'),
-				dataType: 'json',
-				data: {
-					file: file,
-					revision: revision
-				},
-				success: function(response) {
-					if (response.status === 'error') {
-						if (options.error) {
-							options.error.call(options.context, model, response, options);
-						}
-						model.trigger('error', model, response, options);
-					} else {
-						if (options.success) {
-							options.success.call(options.context, model, response, options);
-						}
-						model.trigger('revert', model, response, options);
+			OC.Files.getClient().copy(this.getDownloadUrl(), this.getFullPath(), true)
+				.done(function() {
+					if (options.success) {
+						options.success.call(options.context, model, response, options);
 					}
-				}
-			});
+					model.trigger('revert', model, response, options);
+				})
+				.fail(function () {
+					if (options.error) {
+						options.error.call(options.context, model, response, options);
+					}
+					model.trigger('error', model, response, options);
+				});
 		},
 
 		getFullPath: function() {
@@ -61,12 +50,9 @@
 		},
 
 		getDownloadUrl: function() {
-			var url = OC.generateUrl('/apps/files_versions/download.php');
-			var params = {
-				file: this.get('fullPath'),
-				revision: this.get('timestamp')
-			};
-			return url + '?' + OC.buildQueryString(params);
+			return OC.linkToRemote('dav') + '/meta/' +
+				encodeURIComponent(this.get('fileId')) + '/v/' +
+				encodeURIComponent(this.get('versionId'));
 		}
 	});
 

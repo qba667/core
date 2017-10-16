@@ -26,7 +26,7 @@
 		_currentIndex: 0,
 
 		url: function() {
-			return OC.linkToRemote('dav') + '/meta/' +
+			return OC.linkToRemoteBase('dav') + '/meta/' +
 				encodeURIComponent(this._fileInfo.get('id')) + '/v';
 		},
 

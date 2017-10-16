@@ -17,7 +17,8 @@ describe('OCA.Versions.VersionModel', function() {
 			timestamp: 10000000,
 			fullPath: '/subdir/some file.txt',
 			name: 'some file.txt',
-			size: 150
+			size: 150,
+			versionId: 123456789
 		});
 	});
 
@@ -32,8 +33,8 @@ describe('OCA.Versions.VersionModel', function() {
 	});
 	it('returns the download url', function() {
 		expect(model.getDownloadUrl())
-			.toEqual(OC.generateUrl('/apps/files_versions/download.php') +
-					'?file=%2Fsubdir%2Fsome%20file.txt&revision=10000000'
+			.toEqual(
+				OC.linkToRemoteBase('dav') + '/meta/10000000/v/123456789'
 			);
 	});
 	describe('reverting', function() {
@@ -46,7 +47,9 @@ describe('OCA.Versions.VersionModel', function() {
 			errorStub = sinon.stub();
 			successStub = sinon.stub();
 
-			model.on('revert', revertEventStub);
+			model.on('revert', function () {
+				revertEventStub();
+			});
 			model.on('error', errorStub);
 		});
 		it('tells the server to revert when calling the revert method', function() {
@@ -57,19 +60,15 @@ describe('OCA.Versions.VersionModel', function() {
 			expect(fakeServer.requests.length).toEqual(1);
 			expect(fakeServer.requests[0].url)
 				.toEqual(
-					OC.generateUrl('/apps/files_versions/ajax/rollbackVersion.php') +
-					'?file=%2Fsubdir%2Fsome+file.txt&revision=10000000'
+					'https://somehost:8080/owncloud/remote.php/dav/meta/10000000/v/123456789'
 				);
 
 			fakeServer.requests[0].respond(
-				200,
-				{ 'Content-Type': 'application/json' },
-				JSON.stringify({
-					status: 'success',
-				})
+				204
 			);
 
-			expect(revertEventStub.calledOnce).toEqual(true);
+			console.log('callcount: ' + revertEventStub.callCount);
+			expect(revertEventStub.called).toEqual(true);
 			expect(successStub.calledOnce).toEqual(true);
 			expect(errorStub.notCalled).toEqual(true);
 		});

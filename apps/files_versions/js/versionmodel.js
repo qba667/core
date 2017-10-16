@@ -21,18 +21,19 @@
 			options = options ? _.clone(options) : {};
 			var model = this;
 
-			OC.Files.getClient().copy(this.getDownloadUrl(), this.getFullPath(), true)
+			OC.Files.getClient().copy(this.getDownloadUrl(), this.getFullPath(), true, {}, {pathIsUrl: true})
 				.done(function() {
 					if (options.success) {
-						options.success.call(options.context, model, response, options);
+						options.success.call(options.context, model, {}, options);
 					}
-					model.trigger('revert', model, response, options);
+					model.trigger('revert', model, options);
 				})
-				.fail(function () {
+				.fail(function (status) {
+					console.log('copy.fail :' + status);
 					if (options.error) {
-						options.error.call(options.context, model, response, options);
+						options.error.call(options.context, model, {}, options);
 					}
-					model.trigger('error', model, response, options);
+					model.trigger('error', model, {}, options);
 				});
 		},
 
@@ -50,8 +51,8 @@
 		},
 
 		getDownloadUrl: function() {
-			return OC.linkToRemote('dav') + '/meta/' +
-				encodeURIComponent(this.get('fileId')) + '/v/' +
+			return OC.linkToRemoteBase('dav') + '/meta/' +
+				encodeURIComponent(this.get('id')) + '/v/' +
 				encodeURIComponent(this.get('versionId'));
 		}
 	});
